@@ -21,7 +21,7 @@ export type SystemPurposeExample = string | { prompt: string, action?: 'require-
 
 export const SystemPurposes: { [key in SystemPurposeId]: SystemPurposeData } = {
   Generic: {
-    title: 'Default',
+    title: 'Default AGI',
     description: 'Start here',
     systemMessage: `You are an AI assistant.
 Knowledge cutoff: {{Cutoff}}
