@@ -1,4 +1,11 @@
+import { config } from 'dotenv';
 import { readFile } from 'node:fs/promises';
+import path from 'path';
+
+// Load .env.local in development
+if (process.env.NODE_ENV !== 'production') {
+  config({ path: path.resolve(process.cwd(), '.env.local') });
+}
 
 // Build information
 process.env.NEXT_PUBLIC_BUILD_HASH = 'big-agi-2-dev';
@@ -14,9 +21,19 @@ const buildType =
 
 buildType && console.log(` 🧠 big-AGI: building for ${buildType}...\n`);
 
+// Force persona selection for debugging
+const personaSelection = 'home';  // Explicitly set to 'home'
+
 /** @type {import('next').NextConfig} */
-let nextConfig = {
+const nextConfig = {
   reactStrictMode: true,
+  publicRuntimeConfig: {
+    personaSelection: personaSelection
+  },
+  env: {
+    NEXT_PUBLIC_PERSONA_SELECTION: process.env.NEXT_PUBLIC_PERSONA_SELECTION || 'default',
+    NEXT_PUBLIC_DEBUG: 'true'
+  },
 
   // [exports] https://nextjs.org/docs/advanced-features/static-html-export
   ...buildType && {
@@ -56,6 +73,15 @@ let nextConfig = {
       config.optimization.splitChunks.minSize = 40 * 1024;
     }
 
+    config.plugins = config.plugins || [];
+    
+    // Add environment variables explicitly
+    config.plugins.push(
+      new config.webpack.DefinePlugin({
+        'process.env.NEXT_PUBLIC_PERSONA_SELECTION': JSON.stringify(process.env.NEXT_PUBLIC_PERSONA_SELECTION || 'home')
+      })
+    );
+
     return config;
   },
 
@@ -70,6 +96,15 @@ let nextConfig = {
   // compiler: {
   //   removeConsole: false,
   // },
+
+  // Add this for debugging environment variables during build
+  onInit: (config) => {
+    console.log('Next.js Config Environment:', {
+      envValue: process.env.NEXT_PUBLIC_PERSONA_SELECTION,
+      configValue: nextConfig.env.NEXT_PUBLIC_PERSONA_SELECTION,
+    });
+    return config;
+  },
 };
 
 // Validate environment variables, if set at build time. Will be actually read and used at runtime.
@@ -80,6 +115,15 @@ await import('./src/server/env.mjs');
 if (process.env.ANALYZE_BUNDLE) {
   const { default: withBundleAnalyzer } = await import('@next/bundle-analyzer');
   nextConfig = withBundleAnalyzer({ openAnalyzer: true })(nextConfig);
+}
+
+// Debug logging (only in development)
+if (process.env.NODE_ENV !== 'production') {
+  console.log('Next.js Build Config:', {
+    nodeEnv: process.env.NODE_ENV,
+    personaSelection: process.env.NEXT_PUBLIC_PERSONA_SELECTION,
+    configValue: nextConfig.env.NEXT_PUBLIC_PERSONA_SELECTION
+  });
 }
 
 export default nextConfig;
